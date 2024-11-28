@@ -1,101 +1,248 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from "react"
+import { Plus, StickyNote } from 'lucide-react'
+import { Button } from "@/components/ui/button"                     
+import { NoteCard } from "@/components/note-card"
+import { EditNoteDialog } from "@/components/edit-note-dialog"
+import { Pagination } from "@/components/pagination"
+import type { Note, NoteFormData } from "@/types/note"
+
+const NOTES_PER_PAGE = 6
+
+export default function NotesPage() {
+  const [notes, setNotes] = useState<Note[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+  // Sort notes: pinned first, then by date
+  const sortedNotes = [...notes].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1
+    if (!a.isPinned && b.isPinned) return 1
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  })
+
+  // Calculate pagination
+  const totalPages = Math.ceil(notes.length / NOTES_PER_PAGE) || 1
+  const startIndex = (currentPage - 1) * NOTES_PER_PAGE
+  const endIndex = startIndex + NOTES_PER_PAGE
+  const currentNotes = sortedNotes.slice(startIndex, endIndex)
+
+  const handleAddNote = (data: NoteFormData) => {
+    const newNote: Note = {
+      id: Date.now().toString(),
+      ...data,
+      isPinned: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    setNotes((prev) => [...prev, newNote])
+    setIsDialogOpen(false)
+  }
+
+  const handleEditNote = (data: NoteFormData) => {
+    if (!selectedNote) return
+    setNotes((prev) =>
+      prev.map((note) =>
+        note.id === selectedNote.id
+          ? {
+              ...note,
+              ...data,
+              updatedAt: new Date().toISOString(),
+            }
+          : note
+      )
+    )
+    setSelectedNote(null)
+    setIsDialogOpen(false)
+  }
+
+  const handleTogglePin = (id: string, isPinned: boolean) => {
+    setNotes((prev) =>
+      prev.map((note) =>
+        note.id === id
+          ? {
+              ...note,
+              isPinned,
+              updatedAt: new Date().toISOString(),
+            }
+          : note
+      )
+    )
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    // <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-primary/10">
+    //   <div className="container py-12 px-16">
+    //     <div className="flex justify-between items-center mb-12 mx-8">
+    //       <div className="flex items-center space-x-4">
+    //         <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 rounded-lg border border-primary/20 shadow-lg shadow-primary/5">
+    //           <StickyNote className="h-6 w-6 text-primary" />
+    //         </div>
+    //         <div>
+    //           <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
+    //             Notes
+    //           </h1>
+    //           <p className="text-muted-foreground mt-1">
+    //             Capture your thoughts and ideas
+    //           </p>
+    //         </div>
+    //       </div>
+    //       <Button 
+    //         onClick={() => setIsDialogOpen(true)}
+    //         size="lg"
+    //         className="shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary"
+    //       >
+    //         <Plus className="h-4 w-4 mr-2" />
+    //         Add Note
+    //       </Button>
+    //     </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    //     {notes.length === 0 ? (
+    //       <div className="text-center py-12">
+    //         <div className="bg-gradient-to-br from-primary/20 to-primary/10 inline-flex p-4 rounded-full mb-4 border border-primary/20">
+    //           <StickyNote className="h-6 w-6 text-primary" />
+    //         </div>
+    //         <h2 className="text-xl font-semibold mb-2 text-primary">No notes yet</h2>
+    //         <p className="text-muted-foreground mb-4">
+    //           Create your first note to get started
+    //         </p>
+    //         <Button 
+    //           onClick={() => setIsDialogOpen(true)}
+    //           variant="outline"
+    //           className="border-primary/20 hover:bg-primary/10 hover:text-primary transition-colors"
+    //         >
+    //           <Plus className="h-4 w-4 mr-2" />
+    //           Create Note
+    //         </Button>
+    //       </div>
+    //     ) : (
+    //       <>
+    //         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    //           {currentNotes.map((note) => (
+    //             <NoteCard
+    //               key={note.id}
+    //               note={note}
+    //               onEdit={(note) => {
+    //                 setSelectedNote(note)
+    //                 setIsDialogOpen(true)
+    //               }}
+    //               onTogglePin={handleTogglePin}
+    //             />
+    //           ))}
+    //         </div>
+
+    //         {notes.length > NOTES_PER_PAGE && (
+    //           <div className="flex justify-center mt-12">
+    //             <Pagination
+    //               currentPage={currentPage}
+    //               totalPages={totalPages}
+    //               onPageChange={setCurrentPage}
+    //             />
+    //           </div>
+    //         )}
+    //       </>
+    //     )}
+
+    //     <EditNoteDialog
+    //       note={selectedNote}
+    //       open={isDialogOpen}
+    //       onOpenChange={(open) => {
+    //         setIsDialogOpen(open)
+    //         if (!open) setSelectedNote(null)
+    //       }}
+    //       onSubmit={selectedNote ? handleEditNote : handleAddNote}
+    //     />
+    //   </div>
+    // </div>
+
+
+
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-primary/10 flex justify-center">
+  <div className="container max-w-15xl py-12 px-16"> 
+    <div className="flex justify-between items-center mb-12 mx-8">
+      <div className="flex items-center space-x-4">
+        <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 rounded-lg border border-primary/20 shadow-lg shadow-primary/5">
+          <StickyNote className="h-6 w-6 text-primary" />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
+            Notes
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Capture your thoughts and ideas
+          </p>
+        </div>
+      </div>
+      <Button 
+        onClick={() => setIsDialogOpen(true)}
+        size="lg"
+        className="shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary"
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Add Note
+      </Button>
     </div>
-  );
+
+    {notes.length === 0 ? (
+      <div className="text-center py-12">
+        <div className="bg-gradient-to-br from-primary/20 to-primary/10 inline-flex p-4 rounded-full mb-4 border border-primary/20">
+          <StickyNote className="h-6 w-6 text-primary" />
+        </div>
+        <h2 className="text-xl font-semibold mb-2 text-primary">No notes yet</h2>
+        <p className="text-muted-foreground mb-4">
+        Start capturing your brilliance now and bring them to life!
+        </p>
+        <Button 
+          onClick={() => setIsDialogOpen(true)}
+          variant="outline"
+          className="border-primary/20 hover:bg-primary/10 hover:text-primary transition-colors"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Note
+        </Button>
+      </div>
+    ) : (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {currentNotes.map((note) => (
+            <NoteCard
+              key={note.id}
+              note={note}
+              onEdit={(note) => {
+                setSelectedNote(note)
+                setIsDialogOpen(true)
+              }}
+              onTogglePin={handleTogglePin}
+            />
+          ))}
+        </div>
+
+        {notes.length > NOTES_PER_PAGE && (
+          <div className="flex justify-center mt-12">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+      </>
+    )}
+
+    <EditNoteDialog
+      note={selectedNote}
+      open={isDialogOpen}
+      onOpenChange={(open) => {
+        setIsDialogOpen(open)
+        if (!open) setSelectedNote(null)
+      }}
+      onSubmit={selectedNote ? handleEditNote : handleAddNote}
+    />
+  </div>
+</div>
+
+  )
 }
+
